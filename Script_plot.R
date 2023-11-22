@@ -1,5 +1,7 @@
 library(ggplot2)
+library(dplyr)
 library(tidyr)
+library(reshape2)
 
 # Classificar o dataframe com base em 'Sem_escolaridade' em ordem decrescente
 df_tabela_ensino <- df_tabela_ensino[order(df_tabela_ensino$Sem_escolaridade, decreasing = TRUE), ]
@@ -24,7 +26,7 @@ top_10_cargos <- df_tabela_ensino %>%
   select("NA", "782510", "715210", "621005", "622020", "782305", "512105", "999993", "612005", "715615") %>% 
   setNames(c("Não informado", "MOTORISTA DE CAMINHAO", "PEDREIRO", "TRABALHADOR AGROPECUARIO", "TRABALHADOR VOLANTE DA AGRICULTURA", "MOTORISTA DE CARRO DE PASSEIO", "EMPREGADO DOMESTICO NOS SERVICOS GERAIS", "APOSENTADO", "PRODUTOR AGRICOLA POLIVALENTE", "ELETRICISTA DE INSTALACOES"))
 
-
+mean(top_10_cargos$S)
 df_somas <- data.frame(Coluna = names(colSums(top_10_cargos)), Soma = colSums(top_10_cargos))
 
 #Cria paleta de cores
@@ -43,5 +45,31 @@ ggplot(df_somas, aes(x = Coluna, y = Soma, fill = Coluna)) +
 
 
 
+# Carregar o pacote ggplot2
+library(ggplot2)
+
+# Somar os valores das colunas de escolaridade
+soma_escolaridade <- df_tabela_ensino %>%
+  summarise(Sem_escolaridade = sum(Sem_escolaridade),
+            Fundamental_I = sum(Fundamental_I),
+            Fundamental_II = sum(Fundamental_II),
+            Médio = sum(Médio),
+            Superior_incompleto = sum(Superior_incompleto),
+            Superior_completo = sum(Superior_completo),
+            Ignorado = sum(Ignorado))
+
+# Transformar os dados em formato longo (tidy data)
+df_melted <- melt(soma_escolaridade, variable.name = "Escolaridade", value.name = "Total_Mortes")
+
+# Criar o gráfico de barras
+ggplot(df_melted, aes(x = Escolaridade, y = Total_Mortes, fill = Escolaridade)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Total de Mortes em Acidentes de Trabalho por Categoria de Escolaridade",
+       x = "Escolaridade",
+       y = "Total de Mortes") +
+  theme_minimal()
+
+# Comparando médias das categorias de ensino antes do ensino superior com Superior_incompleto e Superior_completo juntos
+t.test(df_tabela_ensino$Sem_escolaridade + df_tabela_ensino$Fundamental_I + df_tabela_ensino$Fundamental_II + df_tabela_ensino$Médio, df_tabela_ensino$Superior_incompleto + df_tabela_ensino$Superior_completo)
 
 

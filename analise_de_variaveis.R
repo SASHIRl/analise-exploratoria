@@ -1,0 +1,7 @@
+summary(df_tabela_ensino$Sem_escolaridade)
+summary(df_tabela_ensino$Fundamental_I)
+summary(df_tabela_ensino$Fundamental_II)
+summary(df_tabela_ensino$Médio)
+summary(df_tabela_ensino$Superior_incompleto)
+summary(df_tabela_ensino$Superior_completo)
+summary(df_tabela_ensino$Ignorado)

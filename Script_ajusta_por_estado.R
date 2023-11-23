@@ -5,54 +5,79 @@ library(data.table)
 library(scales)
 library(readxl)
 
-tabela_por_estado <- Mortalidade_Geral_2021 %>%
-  filter(ACIDTRAB == 1) %>%
-  group_by(NATURAL, ESC2010) %>%
-  summarise(Qtd_Pessoas = n()) %>%
-  # Vira a tabela para agrupar por 'ESC2010'
-  pivot_wider(names_from = ESC2010, values_from = Qtd_Pessoas, values_fill = 0)
+# Função para processar um conjunto de dados de um ano específico
+df_por_estado <- function(df_mortalidade_geral) {
+  resultado <- df_mortalidade_geral %>%
+    filter(ACIDTRAB == 1) %>%
+    group_by(NATURAL, ESC2010) %>%
+    summarise(Qtd_Pessoas = n()) %>%
+    pivot_wider(names_from = ESC2010, values_from = Qtd_Pessoas, values_fill = 0)
+}
 
+# Mapeamento de códigos para nomes dos estados
+mapeamento_estados <- c("815" = "Pará", "821" = "Maranhão", "823" = "Ceará", "829" = "Bahia", "831" = "Minas Gerais", "835" = "São Paulo", "841" = "Paraná", "842" = "Santa Catarina", "843" = "Rio Grande do Sul", "852" = "Goiás")
 
-tabela_por_estado <- tabela_por_estado %>%
-  # Ordena as colunas da forma solicitada
-  select("NATURAL", "0", "1", "2", "3", "4", "5", "9", "NA") %>%
-  select(-"NA") %>%
-  # Função serve para selecionar uma única coluna, nesse caso usamos para somar a quantidade de pessoas.
-  rowwise() %>%
-  mutate(Total_Pessoas = sum(c_across(where(is.numeric)))) %>%
-  # Renomeia as colunas
-  setNames(c("NATURAL", "Sem_escolaridade", "Fundamental_I", "Fundamental_II", "Médio", "Superior_incompleto", "Superior_completo", "Ignorado", "Total"))
+df_por_estado_esc_name <- function(df_mortalidade_geral) {
+  return <- df_mortalidade_geral %>%
+    # Ordena as colunas da forma solicitada
+    select("NATURAL", "0", "1", "2", "3", "4", "5", "9", "NA") %>%
+    select(-"NA") %>%
+    # Função serve para selecionar uma única coluna, nesse caso usamos para somar a quantidade de pessoas.
+    rowwise() %>%
+    mutate(Total_Pessoas = sum(c_across(where(is.numeric)))) %>%
+    # Renomeia as colunas
+    setNames(c("NATURAL", "Sem_escolaridade", "Fundamental_I", "Fundamental_II", "Médio", "Superior_incompleto", "Superior_completo", "Ignorado", "Total")) %>%
+    mutate(
+      NATURAL = mapeamento_estados[NATURAL]
+    )
+}
 
+df_por_estado_2023 <- df_por_estado_esc_name(df_por_estado(DO23OPEN))
+df_por_estado_2022 <- df_por_estado_esc_name(df_por_estado(DO22OPEN))
+df_por_estado_2021 <- df_por_estado_esc_name(df_por_estado(Mortalidade_Geral_2021))
+df_por_estado_2020 <- df_por_estado_esc_name(df_por_estado(Mortalidade_Geral_2020))
+df_por_estado_2019 <- df_por_estado_esc_name(df_por_estado(Mortalidade_Geral_2019))
+df_por_estado_2018 <- df_por_estado_esc_name(df_por_estado(Mortalidade_Geral_2018))
+df_por_estado_2017 <- df_por_estado_esc_name(df_por_estado(Mortalidade_Geral_2017))
+df_por_estado_2016 <- df_por_estado_esc_name(df_por_estado(Mortalidade_Geral_2016))
+df_por_estado_2015 <- df_por_estado_esc_name(df_por_estado(Mortalidade_Geral_2015))
 
-# Classificar o dataframe com base em 'Total' em ordem decrescente
-tabela_por_estado <- tabela_por_estado[order(tabela_por_estado$Total, decreasing = TRUE), ]
+# Classificar o dataframe com base em 'Total' em ordem decrescente e filtrar os 10 primeiros.
+df_por_estado_2023 <- head(df_por_estado_2023[order(df_por_estado_2023$Total, decreasing = TRUE), ], 10)
+df_por_estado_2022 <- head(df_por_estado_2022[order(df_por_estado_2022$Total, decreasing = TRUE), ], 10)
+df_por_estado_2021 <- head(df_por_estado_2021[order(df_por_estado_2021$Total, decreasing = TRUE), ], 10)
+df_por_estado_2020 <- head(df_por_estado_2020[order(df_por_estado_2020$Total, decreasing = TRUE), ], 10)
+df_por_estado_2019 <- head(df_por_estado_2019[order(df_por_estado_2019$Total, decreasing = TRUE), ], 10)
+df_por_estado_2018 <- head(df_por_estado_2018[order(df_por_estado_2018$Total, decreasing = TRUE), ], 10)
+df_por_estado_2017 <- head(df_por_estado_2017[order(df_por_estado_2017$Total, decreasing = TRUE), ], 10)
+df_por_estado_2016 <- head(df_por_estado_2016[order(df_por_estado_2016$Total, decreasing = TRUE), ], 10)
+df_por_estado_2015 <- head(df_por_estado_2015[order(df_por_estado_2015$Total, decreasing = TRUE), ], 10)
 
-# Filtrar pelos 10 países com mais mortes
-top_10_por_estado <- head(tabela_por_estado, 10)
+df_final <- bind_rows(
+  df_por_estado_2023,
+  df_por_estado_2022,
+  df_por_estado_2021,
+  df_por_estado_2020,
+  df_por_estado_2019,
+  df_por_estado_2018,
+  df_por_estado_2017,
+  df_por_estado_2016,
+  df_por_estado_2015
+)
 
-# Criar o gráfico de barras
-ggplot(top_10_por_estado, aes(x = NATURAL, y = Total)) +
-  geom_bar(stat = "identity", fill = "blue") +
-  labs(title = "Gráfico de mortes por UF",
-       x = "Estados",
-       y = "Mortes") +
-  theme_minimal()
+df_acid_esc_por_estado <- df_final %>%
+  group_by(NATURAL)%>%
+  summarise_all(sum)
 
+df_acid_esc_por_estado <- df_acid_esc_por_estado %>%
+  arrange(desc(Total))
 
-top_10_por_estado <- top_10_por_estado %>% 
-  arrange(desc(Total)) %>% 
-  select(NATURAL, Total) %>%
-  pivot_wider(names_from = NATURAL, values_from = Total, values_fill = 0) %>%
-  select(1:10) %>%
-  select("815", "821", "823", "829", "831", "835", "841", "842", "843", "852") %>% 
-  setNames(c("Pará", "Maranhão", "Ceará", "Bahia", "Minas Gerais", "São Paulo", "Paraná", "Santa Catarina", "Rio Grande do Sul", "Goiás"))
-
-df_somas_estado <- data.frame(Coluna = names(colSums(top_10_por_estado)), Soma = colSums(top_10_por_estado))
+write.csv(df_acid_esc_por_estado, file = "df_acid_esc_por_estado.csv", row.names = FALSE)
 
 #Cria paleta de cores
-cores <- rainbow(length(unique(df_somas$Coluna)))
+cores <- rainbow(length(unique(df_acid_esc_por_estado$NATURAL)))
 
-ggplot(df_somas_estado, aes(x = Coluna, y = Soma, fill = Coluna)) +
+ggplot(df_acid_esc_por_estado, aes(x = NATURAL, y = Total, fill = NATURAL)) +
   geom_bar(stat = "identity") +
   labs(title = "10 Maiores Óbitos por Estados",
        x = " ",
@@ -60,22 +85,5 @@ ggplot(df_somas_estado, aes(x = Coluna, y = Soma, fill = Coluna)) +
        fill = "Estados") +
   scale_fill_manual(values = cores) +
   theme(legend.position = "right", axis.text.x = element_blank())
-
-# Apenas para entendimento //
-val_total_mortes <- rowSums(top_10_por_estado[1, 1:10], na.rm = TRUE)
-
-media_geral_mortes_por_estado <- val_total_mortes / 10
-print(media_geral_mortes_por_estado)
-
-mean(val_total_mortes / (top_10_por_estado$`São Paulo`))
-mean(val_total_mortes / (top_10_por_estado$`Minas Gerais`))
-
-summary(top_10_por_estado)
-
-mean_mg <- val_total_mortes / 360
-mean_sp <- val_total_mortes / 408
-
-print(mean_sp)
-print(mean_mg)
 
 
